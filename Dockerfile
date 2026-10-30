@@ -1,4 +1,5 @@
-FROM maven:3.9-eclipse-temurin-21 AS build
+# Compile the portable Java JAR on the builder's native CPU, without ARM emulation.
+FROM --platform=$BUILDPLATFORM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
 # Cache dependencies before copying source to speed up rebuilds
 COPY pom.xml .
@@ -9,6 +10,7 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
+ENV SERVER_PORT=8083
 EXPOSE 8083
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
   CMD wget -q --spider http://localhost:8083/actuator/health || exit 1

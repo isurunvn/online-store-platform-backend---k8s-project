@@ -1,0 +1,6 @@
+# Only these inputs are needed by the Dockerfile.
+**
+!Dockerfile
+!pom.xml
+!src/
+!src/**
