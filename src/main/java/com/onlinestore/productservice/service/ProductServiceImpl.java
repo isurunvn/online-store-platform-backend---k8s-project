@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@org.springframework.transaction.annotation.Transactional
 @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
 
@@ -103,9 +104,13 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @CacheEvict(value = {"products", "product-by-id"}, allEntries = true)
+    @org.springframework.transaction.annotation.Transactional
     public ProductDTO updateStock(Long id, Integer quantity) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+        if (product.getStockQuantity() + quantity < 0) {
+            throw new com.onlinestore.orderservice.exception.InsufficientStockException("Insufficient stock for product id: " + id);
+        }
         product.setStockQuantity(product.getStockQuantity() + quantity);
         Product updatedProduct = productRepository.save(product);
         return mapToDTO(updatedProduct);

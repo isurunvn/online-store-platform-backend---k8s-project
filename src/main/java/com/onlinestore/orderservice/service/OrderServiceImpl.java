@@ -43,7 +43,7 @@ public class OrderServiceImpl implements OrderService {
         // Auto-create the user profile if it doesn't exist yet (first interaction).
         // This prevents ResourceNotFoundException when a user places an order before
         // visiting the /me endpoint.
-        userService.getCurrentUser(userId, null, null, null);
+        var user = userService.getCurrentUser(userId, null, null, null);
 
         Order order = new Order();
         order.setUserId(userId);
@@ -79,6 +79,7 @@ public class OrderServiceImpl implements OrderService {
         OrderCreatedEvent event = OrderCreatedEvent.builder()
                 .orderId(savedOrder.getId())
                 .userId(userId)
+                .email(user.getEmail())
                 .totalAmount(totalAmount)
                 .items(orderDTO.getOrderItems())
                 .timestamp(LocalDateTime.now())
@@ -90,6 +91,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<OrderDTO> getUserOrders(String userId) {
         return orderRepository.findByUserId(userId).stream()
                 .map(this::mapToOrderDTO)
@@ -97,6 +99,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public OrderDTO getOrderById(Long id, String userId) {
         Order order = orderRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found or does not belong to user"));

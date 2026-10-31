@@ -59,7 +59,7 @@ public class UserController {
     }
 
     @GetMapping("/{keycloakUserId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN') or #keycloakUserId == authentication.name")
     public ResponseEntity<UserDTO> getUserByKeycloakId(@PathVariable String keycloakUserId) {
         return ResponseEntity.ok(userService.getUserByKeycloakId(keycloakUserId));
     }

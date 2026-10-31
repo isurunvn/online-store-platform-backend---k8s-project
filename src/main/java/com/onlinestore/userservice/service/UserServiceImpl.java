@@ -30,12 +30,18 @@ public class UserServiceImpl implements UserService {
                 .orElseGet(() -> {
                     User newUser = User.builder()
                             .keycloakUserId(keycloakUserId)
-                            .email(email != null ? email : "unknown@example.com")
+                            .email(email != null ? email : keycloakUserId + "@users.invalid")
                             .firstName(firstName != null ? firstName : "Unknown")
                             .lastName(lastName != null ? lastName : "Unknown")
                             .build();
                     return userRepository.save(newUser);
                 });
+        // Fill claims when an older order-created profile used placeholder values.
+        if (email != null && !email.isBlank() && (user.getEmail().endsWith("@users.invalid") || user.getEmail().equals("unknown@example.com"))) {
+            user.setEmail(email);
+        }
+        if (firstName != null && "Unknown".equals(user.getFirstName())) user.setFirstName(firstName);
+        if (lastName != null && "Unknown".equals(user.getLastName())) user.setLastName(lastName);
         return mapToUserDTO(user);
     }
 

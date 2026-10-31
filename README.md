@@ -14,25 +14,22 @@ The Maven build stage uses `$BUILDPLATFORM` so compilation runs on the GitHub
 runner's native CPU. The Java JAR is copied into an ARM64 Java runtime image;
 there are no ARM64 build commands to emulate in the runtime stage. The image
 defaults to `SERVER_PORT=8083`, matching its exposed port and Docker healthcheck.
-Kubernetes probes will be configured separately in the GitOps Deployment.
+Kubernetes probes are configured in the GitOps Deployment.
 
-### Configure GitHub repository settings
+### Configure the GitHub prod environment
 
-In this backend repository, open **Settings > Secrets and variables > Actions**.
-Add these repository variables under **Variables**:
+In this backend repository, open **Settings > Environments > prod**.
+Add these environment variables under **Variables**:
 
 | Name | Value |
 | --- | --- |
 | `OCIR_REGISTRY` | `phx.ocir.io` for the configured Phoenix region, without `https://` |
 | `OCIR_NAMESPACE` | `axkouhjvgred`, the namespace returned by the configured OCI account |
-| `OCIR_REPOSITORY` | The exact existing backend repository name, including any repository path prefix, but excluding the registry hostname and tenancy namespace |
+| `OCIR_REPOSITORY` | `online-store/backend` |
 
-The current OCI CLI account returned no repositories in the Phoenix query.
-Confirm the exact existing backend repository path before setting
-`OCIR_REPOSITORY`. Do not use a guessed name: a push can create a repository if
-the OCI user's permissions allow it.
+The verified backend repository is `online-store/backend`.
 
-Add these repository secrets under **Secrets**:
+Add these environment secrets under **Secrets**:
 
 | Name | Value |
 | --- | --- |
@@ -60,14 +57,29 @@ phx.ocir.io/axkouhjvgred/<existing-backend-repository>:sha-<full-git-commit-sha>
 
 Use the reported digest for deployment because rebuilding the same commit can
 resolve newer base images. The workflow does not update the GitOps repository.
-For a private OCIR repository, OKE will also need registry pull credentials in
-the workload namespace, to be prepared during deployment setup.
+For a private OCIR repository, OKE uses the existing `online-store/ocir-pull-secret` for registry pulls.
 
-This workflow compiles and packages the application. The existing Dockerfile
-skips Maven tests; successful image publication does not prove database,
+This workflow compiles, tests and packages the application; successful image publication does not prove database,
 RabbitMQ, or Keycloak connectivity. Those checks belong to the backend rollout.
 
 ## References
 
 - [Oracle: pushing images to OCIR](https://docs.oracle.com/en-us/iaas/Content/Registry/Tasks/registrypushingimagesusingthedockercli.htm)
 - [Docker: building for multiple platforms](https://docs.docker.com/build/building/multi-platform/)
+
+## Final demo integration
+
+The latest image must be rebuilt for checkout/user fixes, email-bearing order events and publisher
+confirmations. GitHub prod environment settings are used by the publishing job. Docker builds now run
+Maven tests instead of skipping them. The separate validation workflow runs on main pushes and PRs.
+
+Runtime authentication still validates JWT_ISSUER_URI, while the Kubernetes ConfigMap supplies an
+internal JWK endpoint. CUSTOMER creates orders, ADMIN manages categories/products, and customers
+cannot read another user's profile or order. The checkout body is `{"items":[{"productId":1,"quantity":2}]}`.
+
+Product stock updates lock the database row and reject negative stock. Order events are persistent,
+mandatory-routed and broker-confirmed. SQL commit and RabbitMQ publish are still separate operations;
+a transactional outbox would be needed for atomic publication guarantees. No payment processing is
+implemented; a newly created order remains PENDING.
+
+See platform-gitops/FINISH-PROJECT.md for image promotion, private frontend access and demo validation.

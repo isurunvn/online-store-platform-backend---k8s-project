@@ -20,12 +20,14 @@ import java.util.List;
 public class OrderController {
 
     private final OrderService orderService;
+    private final com.onlinestore.userservice.service.UserService userService;
 
     @PostMapping
     @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<OrderDTO> createOrder(@AuthenticationPrincipal Jwt jwt, 
                                                 @Valid @RequestBody CreateOrderRequest request) {
         String userId = jwt.getSubject();
+        userService.getCurrentUser(userId, jwt.getClaimAsString("email"), jwt.getClaimAsString("given_name"), jwt.getClaimAsString("family_name"));
         OrderDTO createdOrder = orderService.createOrder(userId, request);
         return new ResponseEntity<>(createdOrder, HttpStatus.CREATED);
     }
