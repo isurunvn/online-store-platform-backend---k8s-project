@@ -11,6 +11,7 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 ENV SERVER_PORT=8083
+USER 10001:10001
 EXPOSE 8083
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
   CMD wget -q --spider http://localhost:8083/actuator/health || exit 1
